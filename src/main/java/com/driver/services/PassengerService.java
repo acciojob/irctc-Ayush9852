@@ -12,10 +12,11 @@ public class PassengerService {
     @Autowired
     PassengerRepository passengerRepository;
 
-    public Integer addPassenger(Passenger passenger) {
-        //Add the passenger Object in the passengerDb and return the passengerId that has been returned
-        passenger = passengerRepository.save(passenger);
+    public Integer addPassenger(Passenger passenger){
+        //Add the passenger Object in the passengerDb and return the passegnerId that has been returned
+        passengerRepository.save(passenger);
 
         return passenger.getPassengerId();
     }
+
 }
