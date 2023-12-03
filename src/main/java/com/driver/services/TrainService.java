@@ -60,11 +60,10 @@ public class TrainService {
         Optional<Train> trainOptional = trainRepository.findById(seatAvailabilityEntryDto.getTrainId());
         if (!trainOptional.isPresent())
             return 0;
-
         Train train = trainOptional.get();
+
         String[] route = train.getRoute().split(",");
         int from = -1, to = -1;
-
         for (int i = 0; i < route.length; ++i) {
             if (route[i].equals(seatAvailabilityEntryDto.getFromStation().name()))
                 from = i;
@@ -72,31 +71,28 @@ public class TrainService {
             if (route[i].equals(seatAvailabilityEntryDto.getToStation().name()))
                 to = i;
         }
-
-        if (from == -1 || to == -1 || from >= to)
+        if (from == - 1 || to == - 1 || from >= to)
             return 0;
 
-        int availableSeats = train.getNoOfSeats();
+        int res = train.getNoOfSeats();
 
-        // Check if the seats are booked between 'from' and 'to'
+        List<Ticket> bookedTicketList = train.getBookedTickets();
         for (int i = from; i <= to; ++i) {
             String station = route[i];
+            int seats = 0;
 
-            // Check if there is a booked ticket for the current station
-            if (train.getBookedTickets().stream()
-                    .anyMatch(ticket -> stationIsBetweenStations(station, ticket.getFromStation(), ticket.getToStation(), route))) {
-                availableSeats--;
+            for (Ticket ticket : bookedTicketList) {
+                int indFrom = Arrays.binarySearch(route, ticket.getFromStation().name());
+                int indTo = Arrays.binarySearch(route, ticket.getToStation().name());
+
+                if (i >= indFrom && i <= indTo)
+                    ++seats;
             }
+
+            res = Math.min(res, train.getNoOfSeats() - seats);
         }
 
-        return availableSeats;
-    }
-    private boolean stationIsBetweenStations(String station, Station from, Station to, String[] route) {
-        int indFrom = Arrays.binarySearch(route, from.name());
-        int indTo = Arrays.binarySearch(route, to.name());
-        int indStation = Arrays.binarySearch(route, station);
-
-        return indStation >= indFrom && indStation <= indTo;
+       return res;
     }
 
     public Integer calculatePeopleBoardingAtAStation(Integer trainId, Station station) throws Exception {
@@ -141,12 +137,14 @@ public class TrainService {
         return res;
     }
 
-    public List<Integer> trainsBetweenAGivenTime(Station station, LocalTime startTime, LocalTime endTime) {
+    public List<Integer> trainsBetweenAGivenTime(Station station, LocalTime startTime, LocalTime endTime){
+
         //When you are at a particular station you need to find out the number of trains that will pass through a given station
         //between a particular time frame both start time and end time included.
         //You can assume that the date change doesn't need to be done ie the travel will certainly happen with the same date (More details
         //in problem statement)
         //You can also assume the seconds and milli seconds value will be 0 in a LocalTime format.
+
         List<Integer> trainsInRange = new ArrayList<>();
 
         // Iterate through all trains in the repository
@@ -155,7 +153,7 @@ public class TrainService {
             if (train.getRoute().contains(station.name())) {
                 // Check if the train departure time is within the specified time range
                 LocalTime departureTime = train.getDepartureTime();
-                if (departureTime.isAfter(startTime) && departureTime.isBefore(endTime) || departureTime.equals(startTime) || departureTime.equals(endTime)) {
+                if (isWithinTimeRange(departureTime, startTime, endTime)) {
                     trainsInRange.add(train.getTrainId());
                 }
             }
@@ -164,5 +162,13 @@ public class TrainService {
         return trainsInRange;
     }
 
+    private boolean isWithinTimeRange(LocalTime time, LocalTime startTime, LocalTime endTime) {
+        if (startTime.isBefore(endTime)) {
+            return !time.isBefore(startTime) && !time.isAfter(endTime);
+        } else {
+            // Handle scenarios where the time range spans midnight
+            return !(time.isAfter(endTime) && time.isBefore(startTime));
+        }
+    }
 
 }
